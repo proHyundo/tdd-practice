@@ -35,4 +35,34 @@ class PointServiceTest {
         // then
         Assertions.assertThat(userPoint.point()).isEqualTo(1000);
     }
+
+    @DisplayName("특정 사용자의 포인트를 충전한다.")
+    @Test
+    void chargeUserPoint() {
+        // given
+        long userId = 1L;
+        long chargeAmount = (long) (Math.random() * 1000 + 500); // 500 ~ 1500 사이의 랜덤 금액
+
+        // when
+        UserPoint updatedUserPoint = pointService.chargeUserPoint(userId, chargeAmount);
+
+        // then
+        long newPoint = 1000 + chargeAmount;
+        Assertions.assertThat(updatedUserPoint.point()).isEqualTo(newPoint);
+    }
+
+    @DisplayName("충전 금액이 0 이하인 경우 예외가 발생한다.")
+    @Test
+    void chargeUserPoint_InvalidAmount() {
+        // given
+        long userId = 1L;
+        long invalidChargeAmount = -100; // 음수 금액
+
+        // when & then
+        Assertions.assertThatThrownBy(() -> pointService.chargeUserPoint(userId, invalidChargeAmount))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("충전 금액은 0보다 커야 합니다.");
+    }
+
+
 }

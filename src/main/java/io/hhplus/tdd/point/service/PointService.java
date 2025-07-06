@@ -14,4 +14,15 @@ public class PointService {
     public UserPoint getUserPointByUserId(long userId) {
         return userPointTable.selectById(userId);
     }
+
+    public UserPoint chargeUserPoint(long userId, long chargeAmount) {
+        long currentPoint = userPointTable.selectById(userId).point();
+
+        if (chargeAmount <= 0) {
+            throw new IllegalArgumentException("충전 금액은 0보다 커야 합니다.");
+        }
+
+        long newPoint = currentPoint + chargeAmount;
+        return userPointTable.insertOrUpdate(userId, newPoint);
+    }
 }

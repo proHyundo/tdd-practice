@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class PointControllerTest {
+class PointApiTest {
 
     private PointController pointController;
     private UserPointTable userPointTable;
@@ -50,7 +50,7 @@ class PointControllerTest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 사용자 조회시 기본값을 반환한다")
+    @DisplayName("포인트 조회 API는, 존재하지 않는 사용자 조회시 기본값을 반환한다")
     void getUserPoint_NonExistingUser_ReturnsDefault() {
         // given
         Long nonExistingUserId = 999L;
@@ -62,5 +62,21 @@ class PointControllerTest {
         assertNotNull(result);
         assertThat(result.id()).isEqualTo(nonExistingUserId);
         assertThat(result.point()).isEqualTo(0); // 기본값 검증
+    }
+
+    @DisplayName("포인트 충전 API 테스트")
+    @Test
+    void charge(){
+        // given
+        Long userId = 1L;
+        long chargeAmount = 500;
+
+        // when
+        UserPoint updatedUserPoint = pointController.charge(userId, chargeAmount);
+
+        // then
+        assertNotNull(updatedUserPoint);
+        assertThat(updatedUserPoint.id()).isEqualTo(userId);
+        assertThat(updatedUserPoint.point()).isEqualTo(1500); // 1000 + 500
     }
 }
