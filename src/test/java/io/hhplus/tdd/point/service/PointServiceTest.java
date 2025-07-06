@@ -1,7 +1,11 @@
 package io.hhplus.tdd.point.service;
 
+import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
+import io.hhplus.tdd.point.domain.PointHistory;
+import io.hhplus.tdd.point.domain.TransactionType;
 import io.hhplus.tdd.point.domain.UserPoint;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,7 +20,8 @@ class PointServiceTest {
     @BeforeEach
     void init() {
         UserPointTable userPointTable = new UserPointTable();
-        pointService = new PointService(userPointTable);
+        PointHistoryTable pointHistoryTable = new PointHistoryTable();
+        pointService = new PointService(userPointTable, pointHistoryTable);
 
         // 초기 데이터 세팅
         userPointTable.insertOrUpdate(1L, 1000);
@@ -103,6 +108,43 @@ class PointServiceTest {
         Assertions.assertThatThrownBy(() -> pointService.useUserPoint(userId, useAmount))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("포인트가 부족합니다.");
+    }
+
+    @DisplayName("포인트를 충전하면 충전 내역이 기록된다.")
+    @Test
+    void chargeUserPoint_RecordsHistory() {
+        // given
+        long userId = 1L;
+        long chargeAmount = 500;
+
+        // when
+        UserPoint updatedUserPoint = pointService.chargeUserPoint(userId, chargeAmount);
+
+        // then
+        Assertions.assertThat(updatedUserPoint.point()).isEqualTo(1500); // 1000 + 500
+        List<PointHistory> historyList = pointService.getUserPointHistoryList(userId);
+        Assertions.assertThat(historyList).isNotEmpty();
+        Assertions.assertThat(historyList.get(0).amount()).isEqualTo(chargeAmount);
+        Assertions.assertThat(historyList.get(0).type()).isEqualTo(TransactionType.CHARGE);
+    }
+
+    @DisplayName("특정 사용자의 포인트 충전/이용 내역을 조회한다.")
+    @Test
+    void getUserPointHistory() {
+        // given
+        long userId = 1L;
+        pointService.chargeUserPoint(userId, 500); // 충전 내역 추가
+        pointService.useUserPoint(userId, 300); // 사용 내역 추가
+
+        // when
+        var historyList = pointService.getUserPointHistoryList(userId);
+
+        // then
+        Assertions.assertThat(historyList).isNotNull();
+        Assertions.assertThat(historyList).isNotEmpty(); // 초기 데이터는 없으므로 빈 리스트 반환
+        Assertions.assertThat(historyList.size()).isGreaterThanOrEqualTo(2); // 충전과 사용 내역이 있으므로 최소 2개 이상
+        Assertions.assertThat(historyList.get(0).type()).isEqualTo(TransactionType.CHARGE);
+        Assertions.assertThat(historyList.get(1).type()).isEqualTo(TransactionType.USE);
     }
 
 

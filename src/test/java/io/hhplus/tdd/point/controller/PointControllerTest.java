@@ -3,9 +3,14 @@ package io.hhplus.tdd.point.controller;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
+import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
+import io.hhplus.tdd.point.domain.PointHistory;
+import io.hhplus.tdd.point.domain.TransactionType;
 import io.hhplus.tdd.point.domain.UserPoint;
 import io.hhplus.tdd.point.service.PointService;
+import java.awt.Point;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,11 +22,13 @@ class PointApiTest {
 
     private PointController pointController;
     private UserPointTable userPointTable;
+    private PointHistoryTable pointHistoryTable;
 
     @BeforeEach
     void setUp() {
         userPointTable = new UserPointTable();
-        PointService pointService = new PointService(userPointTable);
+        pointHistoryTable = new PointHistoryTable();
+        PointService pointService = new PointService(userPointTable, pointHistoryTable);
         pointController = new PointController(pointService);
 
         // 초기 데이터 설정
@@ -94,5 +101,22 @@ class PointApiTest {
         assertNotNull(updatedUserPoint);
         assertThat(updatedUserPoint.id()).isEqualTo(userId);
         assertThat(updatedUserPoint.point()).isEqualTo(700); // 1000 - 300
+    }
+
+    @DisplayName("포인트 충전/이용 내역을 조회 API 테스트")
+    @Test
+    void history() {
+        // given
+        long userId = 1L;
+        // 초기 데이터 설정
+        pointHistoryTable.insert(1L, 500, TransactionType.CHARGE, System.currentTimeMillis());
+        pointHistoryTable.insert(1L, 300, TransactionType.USE, System.currentTimeMillis());
+
+        // when
+        List<PointHistory> histories = pointController.history(userId);
+
+        // then
+        assertNotNull(histories);
+        assertThat(histories).isNotEmpty();
     }
 }
