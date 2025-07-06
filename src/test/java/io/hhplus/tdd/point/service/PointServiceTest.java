@@ -1,5 +1,7 @@
 package io.hhplus.tdd.point.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import io.hhplus.tdd.point.domain.PointHistory;
@@ -8,14 +10,17 @@ import io.hhplus.tdd.point.domain.UserPoint;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.assertj.core.api.Assertions;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @Slf4j
 class PointServiceTest {
 
-    private static PointService pointService;
+    private PointService pointService;
 
     @BeforeEach
     void init() {
@@ -23,9 +28,12 @@ class PointServiceTest {
         PointHistoryTable pointHistoryTable = new PointHistoryTable();
         pointService = new PointService(userPointTable, pointHistoryTable);
 
-        // 초기 데이터 세팅
-        userPointTable.insertOrUpdate(1L, 1000);
-        userPointTable.insertOrUpdate(2L, 2000);
+        setupInitialData(userPointTable);
+    }
+
+    private void setupInitialData(UserPointTable userPointTable) {
+        userPointTable.insertOrUpdate(1, 1000);
+        userPointTable.insertOrUpdate(2, 2000);
     }
 
     @DisplayName("특정 사용자의 포인트를 조회한다.")
@@ -38,22 +46,22 @@ class PointServiceTest {
         UserPoint userPoint = pointService.getUserPointByUserId(userId);
 
         // then
-        Assertions.assertThat(userPoint.point()).isEqualTo(1000);
+        assertThat(userPoint.point()).isEqualTo(1000);
     }
 
     @DisplayName("특정 사용자의 포인트를 충전한다.")
-    @Test
-    void chargeUserPoint() {
+    @ValueSource(longs = {100, 500, 1000, 1500})
+    @ParameterizedTest
+    void chargeUserPoint(long chargeAmount) {
         // given
         long userId = 1L;
-        long chargeAmount = (long) (Math.random() * 1000 + 500); // 500 ~ 1500 사이의 랜덤 금액
 
         // when
         UserPoint updatedUserPoint = pointService.chargeUserPoint(userId, chargeAmount);
 
         // then
         long newPoint = 1000 + chargeAmount;
-        Assertions.assertThat(updatedUserPoint.point()).isEqualTo(newPoint);
+        assertThat(updatedUserPoint.point()).isEqualTo(newPoint);
     }
 
     @DisplayName("충전 금액이 0 이하인 경우 예외가 발생한다.")
@@ -81,15 +89,15 @@ class PointServiceTest {
 
         // then
         long expectedPoint = 1000 - useAmount; // 초기 포인트 1000에서 사용 금액을 뺀 값
-        Assertions.assertThat(updatedUserPoint.point()).isEqualTo(expectedPoint);
+        assertThat(updatedUserPoint.point()).isEqualTo(expectedPoint);
     }
 
     @DisplayName("포인트를 사용할 때, 사용 금액이 0 이하인 경우 예외가 발생한다.")
-    @Test
-    void useUserPoint_InvalidAmount() {
+    @ValueSource(longs = {0, -1, -100, -1000})
+    @ParameterizedTest
+    void useUserPoint_InvalidAmount(long invalidUseAmount) {
         // given
         long userId = 1L;
-        long invalidUseAmount = (long) Math.random() * -1000; // 0 이하의 랜덤 금액
 
         // when & then
         Assertions.assertThatThrownBy(() -> pointService.useUserPoint(userId, invalidUseAmount))
@@ -116,16 +124,18 @@ class PointServiceTest {
         // given
         long userId = 1L;
         long chargeAmount = 500;
+        pointService.chargeUserPoint(userId, chargeAmount); // 충전 내역 추가
 
         // when
-        UserPoint updatedUserPoint = pointService.chargeUserPoint(userId, chargeAmount);
+        List<PointHistory> historyList = pointService.getUserPointHistoryList(userId);
 
         // then
-        Assertions.assertThat(updatedUserPoint.point()).isEqualTo(1500); // 1000 + 500
-        List<PointHistory> historyList = pointService.getUserPointHistoryList(userId);
-        Assertions.assertThat(historyList).isNotEmpty();
-        Assertions.assertThat(historyList.get(0).amount()).isEqualTo(chargeAmount);
-        Assertions.assertThat(historyList.get(0).type()).isEqualTo(TransactionType.CHARGE);
+        assertThat(historyList).hasSize(1);
+        PointHistory history = historyList.get(0);
+        assertThat(history.userId()).isEqualTo(userId);
+        assertThat(history.amount()).isEqualTo(chargeAmount);
+        assertThat(history.type()).isEqualTo(TransactionType.CHARGE);
+        assertThat(history.updateMillis()).isCloseTo(System.currentTimeMillis(), Offset.offset(1000L));
     }
 
     @DisplayName("특정 사용자의 포인트 충전/이용 내역을 조회한다.")
@@ -137,14 +147,14 @@ class PointServiceTest {
         pointService.useUserPoint(userId, 300); // 사용 내역 추가
 
         // when
-        var historyList = pointService.getUserPointHistoryList(userId);
+        List<PointHistory> historyList = pointService.getUserPointHistoryList(userId);
 
         // then
-        Assertions.assertThat(historyList).isNotNull();
-        Assertions.assertThat(historyList).isNotEmpty(); // 초기 데이터는 없으므로 빈 리스트 반환
-        Assertions.assertThat(historyList.size()).isGreaterThanOrEqualTo(2); // 충전과 사용 내역이 있으므로 최소 2개 이상
-        Assertions.assertThat(historyList.get(0).type()).isEqualTo(TransactionType.CHARGE);
-        Assertions.assertThat(historyList.get(1).type()).isEqualTo(TransactionType.USE);
+        assertThat(historyList).isNotNull();
+        assertThat(historyList).isNotEmpty(); // 초기 데이터는 없으므로 빈 리스트 반환
+        assertThat(historyList.size()).isGreaterThanOrEqualTo(2); // 충전과 사용 내역이 있으므로 최소 2개 이상
+        assertThat(historyList.get(0).type()).isEqualTo(TransactionType.CHARGE);
+        assertThat(historyList.get(1).type()).isEqualTo(TransactionType.USE);
     }
 
 
