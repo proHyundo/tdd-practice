@@ -1,5 +1,8 @@
 package io.hhplus.tdd.point.domain;
 
+import lombok.Builder;
+
+@Builder
 public record UserPoint(
         long id,
         long point,

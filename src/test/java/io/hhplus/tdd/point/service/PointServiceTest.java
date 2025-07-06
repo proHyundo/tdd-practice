@@ -64,5 +64,46 @@ class PointServiceTest {
                 .hasMessageContaining("충전 금액은 0보다 커야 합니다.");
     }
 
+    @DisplayName("특정 사용자의 포인트를 사용한다.")
+    @Test
+    void useUserPoint() {
+        // given
+        long userId = 1L;
+        long useAmount = (long) Math.random() * 1000 + 1; // 0 ~ 1000 사이의 랜덤 금액
+
+        // when
+        UserPoint updatedUserPoint = pointService.useUserPoint(userId, useAmount);
+
+        // then
+        long expectedPoint = 1000 - useAmount; // 초기 포인트 1000에서 사용 금액을 뺀 값
+        Assertions.assertThat(updatedUserPoint.point()).isEqualTo(expectedPoint);
+    }
+
+    @DisplayName("포인트를 사용할 때, 사용 금액이 0 이하인 경우 예외가 발생한다.")
+    @Test
+    void useUserPoint_InvalidAmount() {
+        // given
+        long userId = 1L;
+        long invalidUseAmount = (long) Math.random() * -1000; // 0 이하의 랜덤 금액
+
+        // when & then
+        Assertions.assertThatThrownBy(() -> pointService.useUserPoint(userId, invalidUseAmount))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("사용 금액은 0보다 커야 합니다.");
+    }
+
+    @DisplayName("포인트를 사용할 때, 가진 포인트가 사용할 포인트보다 작은 경우 예외가 발생한다.")
+    @Test
+    void useUserPoint_InsufficientPoints() {
+        // given
+        long userId = 1L;
+        long useAmount = 2000; // 1000보다 큰 금액
+
+        // when & then
+        Assertions.assertThatThrownBy(() -> pointService.useUserPoint(userId, useAmount))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("포인트가 부족합니다.");
+    }
+
 
 }

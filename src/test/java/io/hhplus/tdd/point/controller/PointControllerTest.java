@@ -79,4 +79,20 @@ class PointApiTest {
         assertThat(updatedUserPoint.id()).isEqualTo(userId);
         assertThat(updatedUserPoint.point()).isEqualTo(1500); // 1000 + 500
     }
+
+    @DisplayName("포인트 사용 API 테스트")
+    @Test
+    void use() {
+        // given
+        Long userId = 1L;
+        long useAmount = 300;
+
+        // when
+        UserPoint updatedUserPoint = pointController.use(userId, useAmount);
+
+        // then
+        assertNotNull(updatedUserPoint);
+        assertThat(updatedUserPoint.id()).isEqualTo(userId);
+        assertThat(updatedUserPoint.point()).isEqualTo(700); // 1000 - 300
+    }
 }
