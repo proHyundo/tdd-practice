@@ -24,7 +24,7 @@ public class PointService {
         return userPoint;
     }
 
-    public UserPoint chargeUserPoint(long userId, long chargeAmount) {
+    public synchronized UserPoint chargeUserPoint(long userId, long chargeAmount) {
         long currentPoint = userPointTable.selectById(userId).point();
 
         if (chargeAmount <= 0) {
@@ -41,7 +41,7 @@ public class PointService {
         pointHistoryTable.insert(userId, chargeAmount, type, System.currentTimeMillis());
     }
 
-    public UserPoint useUserPoint(long id, long amount) {
+    public synchronized UserPoint useUserPoint(long id, long amount) {
         UserPoint userPoint = userPointTable.selectById(id);
         if (userPoint == null) {
             return UserPoint.empty(id);
