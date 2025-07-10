@@ -17,7 +17,11 @@ public class PointService {
     private final PointHistoryTable pointHistoryTable;
 
     public UserPoint getUserPointByUserId(long userId) {
-        return userPointTable.selectById(userId);
+        UserPoint userPoint = userPointTable.selectById(userId);
+        if (userPoint == null) {
+            throw new IllegalArgumentException("존재하지 않는 사용자입니다.");
+        }
+        return userPoint;
     }
 
     public UserPoint chargeUserPoint(long userId, long chargeAmount) {
